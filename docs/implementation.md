@@ -1,6 +1,6 @@
-# 🧠 Vector Database POC — Curriculum Project
+# 🧠 Vector Database POC
 
-> **Goal:** Demonstrate real-world understanding of vector embeddings, semantic search, and LLM-augmented retrieval (RAG) in a fully containerized local setup — purpose-built for a strong portfolio and interview talking points.
+> **Goal:** Demonstrate real-world understanding of vector embeddings, semantic search, and LLM-augmented retrieval (RAG) in a fully containerized local setup.
 
 ---
 

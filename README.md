@@ -1,4 +1,4 @@
-# rag-vector-poc
+# RAG Vector Database POC
 
 **Ask Your Docs** — A document Q&A application that lets you upload documents (PDF, TXT, Markdown) and ask questions about them using AI.
 
