@@ -1,17 +1,36 @@
 import os
 from contextlib import asynccontextmanager
+from prometheus_client import make_asgi_app, Counter, Histogram, Gauge
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 
-from routers import ingest, query
+from routers import ingest, query, eval
 
 
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "documents")
 VECTOR_SIZE = 384
+
+http_requests_total = Counter(
+    "http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
+)
+
+http_request_duration_seconds = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency in seconds",
+    ["method", "endpoint"],
+)
+
+ingest_documents_total = Counter("ingest_documents_total", "Total documents ingested")
+
+queries_total = Counter("queries_total", "Total queries processed")
+
+embeddings_generated_total = Counter(
+    "embeddings_generated_total", "Total embeddings generated"
+)
 
 
 @asynccontextmanager
@@ -44,6 +63,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    import time
+
+    method = request.method
+    path = request.url.path
+
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+
+    http_requests_total.labels(
+        method=method, endpoint=path, status=response.status_code
+    ).inc()
+
+    http_request_duration_seconds.labels(method=method, endpoint=path).observe(duration)
+
+    return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,8 +92,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+prometheus_enabled = os.getenv("PROMETHEUS_ENABLED", "false").lower() == "true"
+if prometheus_enabled:
+    prometheus_app = make_asgi_app()
+    app.mount("/metrics", prometheus_app)
+
 app.include_router(ingest.router, prefix="/ingest", tags=["Ingest"])
 app.include_router(query.router, prefix="/query", tags=["Query"])
+app.include_router(eval.router, prefix="/eval", tags=["Evaluation"])
 
 
 @app.get("/health")

@@ -362,9 +362,9 @@ client.create_collection(
 - [x] Integration tests
 
 ### Phase 3 — Production Signals (Really impresses)
-- [ ] Prometheus metrics + Grafana dashboard via Docker Compose
-- [ ] Async ingestion queue (Celery + Redis)
-- [ ] `/eval` endpoint: run retrieval evaluation against a test set
+- [x] Prometheus metrics + Grafana dashboard via Docker Compose
+- [x] Async ingestion queue (Celery + Redis)
+- [x] `/eval` endpoint: run retrieval evaluation against a test set
 - [ ] Horizontal scaling demo with Kind (multiple API replicas)
 - [ ] Helm chart for Kubernetes deployment
 
