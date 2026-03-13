@@ -2,6 +2,9 @@
 
 **Ask Your Docs** — A document Q&A application that lets you upload documents (PDF, TXT, Markdown) and ask questions about them using AI.
 
+
+![Architecture](docs/diagram.png)
+
 ## Quick Start
 
 ### Prerequisites

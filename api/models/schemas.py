@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 
 
 class DocumentUpload(BaseModel):
@@ -22,9 +23,17 @@ class SearchResult(BaseModel):
     document_name: Optional[str] = None
 
 
+class QueryFilter(BaseModel):
+    document_name: Optional[str] = None
+    document_id: Optional[str] = None
+
+
 class QueryRequest(BaseModel):
     question: str
     top_k: int = 5
+    filter: Optional[QueryFilter] = None
+    use_hybrid: bool = False
+    use_rerank: bool = False
 
 
 class QueryResponse(BaseModel):

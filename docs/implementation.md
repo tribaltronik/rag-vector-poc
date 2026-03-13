@@ -354,11 +354,11 @@ client.create_collection(
 - [x] Source citation in answers
 
 ### Phase 2 — Depth (Good interview conversations)
-- [ ] Metadata filtering (filter by filename, date)
-- [ ] Hybrid search: combine BM25 keyword + vector (Qdrant supports this natively!)
-- [ ] Multiple embedding model support (swap via env var)
-- [ ] Re-ranking step with a cross-encoder model
-- [ ] Qdrant Web UI integration (`http://localhost:6333/dashboard`)
+- [x] Metadata filtering (filter by filename, date)
+- [x] Hybrid search: combine BM25 keyword + vector (Qdrant supports this natively!)
+- [x] Multiple embedding model support (swap via env var)
+- [x] Re-ranking step with a cross-encoder model
+- [x] Qdrant Web UI integration (`http://localhost:6333/dashboard`)
 
 ### Phase 3 — Production Signals (Really impresses)
 - [ ] Prometheus metrics + Grafana dashboard via Docker Compose
