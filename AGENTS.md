@@ -48,20 +48,24 @@ docker-compose up -d ui                       # UI on port 8501
 
 ### Running Tests
 
-There are currently no formal tests in this project. When adding tests:
-
 ```bash
-# Run pytest (if configured)
-pytest
+# Install test dependencies
+pip install pytest requests qdrant-client langchain langchain-community sentence-transformers==2.3.1
+
+# Run all tests
+pytest tests/ -v
+
+# Run unit tests only
+PYTHONPATH=./api pytest tests/test_phase2.py -v
+
+# Run integration tests (requires running services)
+pytest tests/test_api_integration.py -v
 
 # Run a single test file
-pytest tests/test_api.py
+pytest tests/test_phase2.py::TestMetadataFiltering -v
 
 # Run a single test function
-pytest tests/test_api.py::test_health_check
-
-# Run tests with verbose output
-pytest -v
+pytest tests/test_phase2.py::TestMetadataFiltering::test_build_filter_with_document_name -v
 ```
 
 ### API Development Server

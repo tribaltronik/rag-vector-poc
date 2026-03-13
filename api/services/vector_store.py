@@ -1,9 +1,10 @@
 import os
 import json
-import httpx
+import re
 from typing import List, Dict, Any, Optional
+from collections import Counter
 
-from qdrant_client.models import SparseVector, Filter, FieldCondition, MatchText
+from qdrant_client.models import Filter, FieldCondition, MatchText
 
 
 class VectorStore:
@@ -16,26 +17,16 @@ class VectorStore:
         vectors: List[List[float]],
         payloads: List[Dict[str, Any]],
         ids: Optional[List[str]] = None,
-        texts: Optional[List[str]] = None,
     ):
-        from qdrant_client.models import PointStruct, SparseVector
+        from qdrant_client.models import PointStruct
 
         if ids is None:
             ids = [str(i) for i in range(len(vectors))]
 
-        points = []
-        for i in range(len(vectors)):
-            point_dict = {
-                "id": ids[i],
-                "vector": vectors[i],
-                "payload": payloads[i],
-            }
-            if texts and i < len(texts):
-                point_dict["vector"] = {
-                    "dense": vectors[i],
-                    "sparse": texts[i],
-                }
-            points.append(PointStruct(**point_dict))
+        points = [
+            PointStruct(id=ids[i], vector=vectors[i], payload=payloads[i])
+            for i in range(len(vectors))
+        ]
 
         self.client.upsert(collection_name=self.collection_name, points=points)
 
@@ -93,54 +84,75 @@ class VectorStore:
         query_filter: Optional[Dict] = None,
         alpha: float = 0.7,
     ) -> List[Dict[str, Any]]:
-        from qdrant_client.models import SparseVector, FusionQuery
-
-        sparse_vector = self._compute_bm25(query_text)
-
-        results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector={
-                "dense": query_vector,
-                "sparse": sparse_vector,
-            },
+        vector_results = self.search(
+            query_vector=query_vector,
+            top_k=top_k * 3,
             query_filter=query_filter,
-            limit=top_k,
-            with_payload=True,
         )
 
-        return [
-            {
-                "id": result.id,
-                "score": result.score,
-                "payload": result.payload,
-                "text": result.payload.get("text", ""),
-                "document_id": result.payload.get("document_id", ""),
-                "document_name": result.payload.get("document_name", ""),
-                "chunk_index": result.payload.get("chunk_index", 0),
+        query_terms = self._tokenize(query_text)
+        keyword_results = self._keyword_search(
+            query_terms=query_terms,
+            results=vector_results,
+            top_k=top_k * 3,
+        )
+
+        combined = {}
+        for r in vector_results:
+            combined[r["id"]] = {
+                **r,
+                "vector_score": r["score"],
+                "keyword_score": 0.0,
             }
-            for result in results
-        ]
+        for r in keyword_results:
+            if r["id"] in combined:
+                combined[r["id"]]["keyword_score"] = r["score"]
+            else:
+                combined[r["id"]] = {
+                    **r,
+                    "vector_score": 0.0,
+                    "keyword_score": r["score"],
+                }
 
-    def _compute_bm25(self, text: str) -> Dict[str, Any]:
-        import re
-        from collections import Counter
+        for r in combined.values():
+            r["score"] = alpha * r["vector_score"] + (1 - alpha) * r["keyword_score"]
 
-        tokens = re.findall(r"\w+", text.lower())
-        term_freq = Counter(tokens)
+        sorted_results = sorted(
+            combined.values(), key=lambda x: x["score"], reverse=True
+        )
+        return sorted_results[:top_k]
 
-        max_tf = max(term_freq.values()) if term_freq else 1
+    def _tokenize(self, text: str) -> List[str]:
+        return re.findall(r"\w+", text.lower())
 
-        sparse_indices = []
-        sparse_values = []
+    def _compute_bm25_score(self, query_terms: List[str], text: str) -> float:
+        doc_terms = self._tokenize(text)
+        doc_freq = Counter(doc_terms)
+        query_freq = Counter(query_terms)
 
-        for term, tf in term_freq.items():
-            sparse_indices.append(hash(term) % 100000)
-            sparse_values.append(tf / max_tf)
+        score = 0.0
+        for term, qf in query_freq.items():
+            if term in doc_freq:
+                tf = doc_freq[term]
+                score += (tf * (1.5 + 1)) / (tf + 1.5)
 
-        return {
-            "indices": sparse_indices,
-            "values": sparse_values,
-        }
+        return score
+
+    def _keyword_search(
+        self,
+        query_terms: List[str],
+        results: List[Dict],
+        top_k: int,
+    ) -> List[Dict[str, Any]]:
+        scored = []
+        for r in results:
+            text = r.get("text", "")
+            score = self._compute_bm25_score(query_terms, text)
+            if score > 0:
+                scored.append({**r, "score": score})
+
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        return scored[:top_k]
 
     def delete_collection(self):
         self.client.delete_collection(collection_name=self.collection_name)

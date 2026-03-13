@@ -359,6 +359,7 @@ client.create_collection(
 - [x] Multiple embedding model support (swap via env var)
 - [x] Re-ranking step with a cross-encoder model
 - [x] Qdrant Web UI integration (`http://localhost:6333/dashboard`)
+- [x] Integration tests
 
 ### Phase 3 — Production Signals (Really impresses)
 - [ ] Prometheus metrics + Grafana dashboard via Docker Compose
