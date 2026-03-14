@@ -164,4 +164,3 @@ See [AGENTS.md](./AGENTS.md) for developer guidelines.
 | Frontend | Streamlit |
 | Metadata DB | PostgreSQL |
 | Monitoring | Prometheus + Grafana |
-| Monitoring | Prometheus + Grafana |
